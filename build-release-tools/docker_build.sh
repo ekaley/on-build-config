@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 set -e
 
 #
@@ -21,6 +21,7 @@ IS_OFFICIAL_RELEASE=${IS_OFFICIAL_RELEASE:=false}
 
 BUILD_NIGHTLY=false
 BUILD_LATEST=false
+RC="RC"
 
 tagCalculate() {
     repo=$1
@@ -34,21 +35,19 @@ tagCalculate() {
     else
         CHANGELOG_VERSION=$RACKHD_CHANGELOG_VERSION
     fi
-    
+
     #generate real TAG
     if [ "$IS_OFFICIAL_RELEASE" == "true" ]; then
         PKG_TAG="$CHANGELOG_VERSION"
     else
-        GIT_COMMIT_DATE=$(git show -s --pretty="format:%ci")
-        DATE_STRING="$(date -d "$GIT_COMMIT_DATE" -u +"%Y%m%dUTC")"
-        GIT_COMMIT_HASH=$(git show -s --pretty="format:%h")
-        PKG_TAG="$CHANGELOG_VERSION-$DATE_STRING-$GIT_COMMIT_HASH"
+        RC_VERSION=`cat version.txt | tr -d '\n'`
+        PKG_TAG="$CHANGELOG_VERSION-$RC-$RC_VERSION"
     fi
 }
 
 doBuild() {
-    # List order is important, on-tasks image build is based on on-core image, 
-    # on-http and on-taskgraph ard based on on-tasks image 
+    # List order is important, on-tasks image build is based on on-core image,
+    # on-http and on-taskgraph ard based on on-tasks image
     # others are based on on-core image
     repos=$(echo "on-imagebuilder on-core on-syslog on-dhcp-proxy on-tftp on-wss on-statsd on-tasks on-taskgraph on-http")
     #Record all repo:tag for post-pushing
@@ -94,12 +93,12 @@ doBuild() {
                 "on-tasks")
                     PRE_TAG=$TAG
                     ;;
-            esac 
+            esac
             mv ../Dockerfile.bak Dockerfile
         popd
     done
 
-    # write build list to a file for guiding image push. 
+    # write build list to a file for guiding image push.
     pushd $WORKDIR
     echo "Imagename:tag list of this build is $repos_tags"
     echo $repos_tags >> build_record
@@ -132,3 +131,14 @@ else
 fi
 # Build ends
 popd
+
+updateVersion
+
+updateVersion() {
+    release_version=`cat version.txt | tr -d '\n'`
+    release_version=$((release_version+1))
+    echo ${release_version} | tr -d "\n" > version.txt
+    git add version.txt
+    git commit -m "New release candidate v${release_version}"
+    git push origin
+}
