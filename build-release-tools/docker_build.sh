@@ -21,6 +21,8 @@ IS_OFFICIAL_RELEASE=${IS_OFFICIAL_RELEASE:=false}
 
 BUILD_NIGHTLY=false
 BUILD_LATEST=false
+
+BUILD_ID=env $BUILD_ID
 RC="RC"
 
 tagCalculate() {
@@ -40,7 +42,7 @@ tagCalculate() {
     if [ "$IS_OFFICIAL_RELEASE" == "true" ]; then
         PKG_TAG="$CHANGELOG_VERSION"
     else
-        RC_VERSION=`cat version.txt | tr -d '\n'`
+        RC_VERSION=BUILD_ID
         PKG_TAG="$CHANGELOG_VERSION-$RC-$RC_VERSION"
     fi
 }
@@ -131,14 +133,3 @@ else
 fi
 # Build ends
 popd
-
-updateVersion
-
-updateVersion() {
-    release_version=`cat version.txt | tr -d '\n'`
-    release_version=$((release_version+1))
-    echo ${release_version} | tr -d "\n" > version.txt
-    git add version.txt
-    git commit -m "New release candidate v${release_version}"
-    git push origin
-}
